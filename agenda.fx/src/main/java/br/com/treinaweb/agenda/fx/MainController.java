@@ -2,6 +2,7 @@ package br.com.treinaweb.agenda.fx;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import br.com.treinaweb.agenda.entidades.Contato;
 import br.com.treinaweb.agenda.repositorios.Impl.ContatoRepositorio;
@@ -10,7 +11,10 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -35,7 +39,10 @@ public class MainController implements Initializable{
 	private Button botaoSalvar;
 	@FXML
 	private Button botaoCancelar;
-
+	
+	private Boolean btInserir;
+	private Contato contatoSelecionado;
+	
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
 		this.tabelaContatos.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
@@ -54,10 +61,62 @@ public class MainController implements Initializable{
 			if (contatoNovo != null) {
 				txtNome.setText(contatoNovo.getNome());
 				txtIdade.setText(String.valueOf(contatoNovo.getIdade()));
-				txtTelefone.setText(contatoNovo.getTelefone());				
+				txtTelefone.setText(contatoNovo.getTelefone());
+				this.contatoSelecionado = contatoNovo;
 			}
 		});
 		carregarTabelaContatos();
+	}
+	
+	public void botaoInserir_Action() {
+		this.btInserir = true;
+		this.txtNome.setText("");
+		this.txtIdade.setText("");
+		this.txtTelefone.setText("");
+		habilitarEdicaoAgenda(true);
+	}
+	
+	public void botaoAlterar_Action() {
+		habilitarEdicaoAgenda(true);
+		this.btInserir = false;
+		this.txtNome.setText(this.contatoSelecionado.getNome());
+		this.txtIdade.setText(Integer.toString(this.contatoSelecionado.getIdade()));
+		this.txtTelefone.setText(this.contatoSelecionado.getTelefone());
+	}
+	
+	public void botaoCancelar_Action() {
+		habilitarEdicaoAgenda(false);
+		this.tabelaContatos.getSelectionModel().selectFirst();
+	}
+	
+	public void botaoSalvar_Action() {
+		IAgendaRepositorio<Contato> respositorioContato = new ContatoRepositorio();
+		Contato contato = new Contato();
+		contato.setNome(txtNome.getText());
+		contato.setIdade(Integer.parseInt(txtIdade.getText()));
+		contato.setTelefone(txtTelefone.getText());
+		if (this.btInserir) {
+			respositorioContato.inserir(contato);
+		} else {
+			respositorioContato.atualizar(contato);
+		}
+		habilitarEdicaoAgenda(false);
+		carregarTabelaContatos();
+		this.tabelaContatos.getSelectionModel().selectFirst();
+	}
+	
+	public void botaoExcluir_Action() {
+		Alert confirmacao = new Alert(AlertType.CONFIRMATION);
+		confirmacao.setTitle("Confirmação");
+		confirmacao.setHeaderText("Confirmação da exclusão do contato");
+		confirmacao.setContentText("Tem certeza de que deseja excluir este contato?");
+		Optional<ButtonType> resultadoConfirmacao = confirmacao.showAndWait();
+		if (resultadoConfirmacao.isPresent() && resultadoConfirmacao.get() == ButtonType.OK) {
+			IAgendaRepositorio<Contato> repositorioContato = new ContatoRepositorio();
+			repositorioContato.excluir(this.contatoSelecionado);
+			carregarTabelaContatos();
+			this.tabelaContatos.getSelectionModel().selectFirst();			
+		}
 	}
 	
 	private void carregarTabelaContatos() {
